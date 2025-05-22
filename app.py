@@ -9,38 +9,50 @@ client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 st.set_page_config(layout="wide")
 st.title("ReadWith: Feedback Collector")
 
-# --- State management ---
-if "user_input" not in st.session_state:
-    st.session_state.user_input = ""
-if "ai_response" not in st.session_state:
-    st.session_state.ai_response = ""
+# --- State management for multi-turn chat ---
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-# --- Main Layout with Two Columns ---
+# --- Layout: Left (chat), Right (feedback) ---
 left_col, right_col = st.columns([3, 1])
 
-# --- Left Column: Chat Display ---
+# --- Left Column: Chat Bubbles ---
 with left_col:
-    if st.session_state.ai_response:
-        st.subheader("💬 You asked:")
-        st.markdown(f"> {st.session_state.user_input}")
+    st.subheader("💬 Conversation")
+    for i, turn in enumerate(st.session_state.chat_history):
+        with st.container():
+            # User message (right-aligned)
+            st.markdown(
+                f"""
+                <div style="text-align: right; background-color: #e6f7ff; padding: 10px; border-radius: 10px; margin-bottom: 5px;">
+                    <strong>You:</strong> {turn['user']}
+                </div>
+                """, unsafe_allow_html=True)
 
-        st.subheader("📘 AI Response")
-        st.write(st.session_state.ai_response)
+            # AI response (left-aligned)
+            st.markdown(
+                f"""
+                <div style="text-align: left; background-color: #f9f9f9; padding: 10px; border-radius: 10px; margin-bottom: 20px;">
+                    <strong>ReadWith:</strong> {turn['ai']}
+                </div>
+                """, unsafe_allow_html=True)
 
-# --- Right Column: Feedback Tools (Aligned to Top) ---
+# --- Right Column: Feedback on latest AI message ---
 with right_col:
-    if st.session_state.ai_response:
+    if st.session_state.chat_history:
         st.subheader("📝 Feedback")
         good = st.button("👍 Good", key="good")
         bad = st.button("👎 Needs Work", key="bad")
         written_feedback = st.text_area("Optional comment", key="feedback")
+
         if st.button("Submit Feedback", key="submit_feedback"):
+            latest = st.session_state.chat_history[-1]
             feedback_type = "Good" if good else "Needs Work" if bad else "Unrated"
             timestamp = datetime.now().isoformat()
             feedback_data = {
                 "timestamp": timestamp,
-                "user_input": st.session_state.user_input,
-                "ai_response": st.session_state.ai_response,
+                "user_input": latest['user'],
+                "ai_response": latest['ai'],
                 "rating": feedback_type,
                 "comment": written_feedback
             }
@@ -52,7 +64,7 @@ with right_col:
             df.to_csv("feedback_log.csv", index=False)
             st.success("✅ Feedback submitted!")
 
-# --- Message Input (Always at Bottom) ---
+# --- Message input area ---
 st.markdown("---")
 st.subheader("💬 Start a New Message")
 with st.form("message_form", clear_on_submit=True):
@@ -75,7 +87,7 @@ if submitted and new_input:
                     }
                 ]
             )
-            st.session_state.user_input = new_input
-            st.session_state.ai_response = response.choices[0].message.content
+            ai_reply = response.choices[0].message.content
+            st.session_state.chat_history.append({"user": new_input, "ai": ai_reply})
         except Exception as e:
-            st.session_state.ai_response = f"⚠️ Error: {str(e)}"
+            st.session_state.chat_history.append({"user": new_input, "ai": f"⚠️ Error: {str(e)}"})
