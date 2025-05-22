@@ -3,18 +3,18 @@ import pandas as pd
 from datetime import datetime
 import openai
 
-# --- Set API key from Streamlit Secrets ---
+# --- Load OpenAI key securely from Streamlit secrets ---
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-st.title("ReadWith: Feedback Collector & AI Chat")
+st.title("ReadWith: Feedback Collector & AI Chat v3")
 
 # --- User prompt input ---
 st.subheader("💬 Start a Conversation with ReadWith")
-user_input = st.text_input("Your message:", "")
+user_input = st.text_input("Your message:")
 
 ai_response = ""
 
-# --- Submit and fetch AI reply ---
+# --- Get AI response if message submitted ---
 if user_input:
     with st.spinner("Thinking..."):
         try:
@@ -35,7 +35,7 @@ if user_input:
         except Exception as e:
             ai_response = f"⚠️ Error: {str(e)}"
 
-# --- Display AI response and feedback interface ---
+# --- Display response and feedback tools ---
 if ai_response:
     st.subheader("📘 AI Response")
     st.write(ai_response)
@@ -56,7 +56,18 @@ if ai_response:
             "timestamp": timestamp,
             "user_input": user_input,
             "ai_response": ai_response,
-            "
+            "rating": feedback_type,
+            "comment": written_feedback
+        }
 
+        try:
+            df = pd.read_csv("feedback_log.csv")
+        except FileNotFoundError:
+            df = pd.DataFrame(columns=["timestamp", "user_input", "ai_response", "rating", "comment"])
 
+        df = pd.concat([df, pd.DataFrame([feedback_data])], ignore_index=True)
+        df.to_csv("feedback_log.csv", index=False)
+        st.success("✅ Feedback saved!")
 
+elif not user_input:
+    st.write("👆 Type a message to begin a conversation.")
