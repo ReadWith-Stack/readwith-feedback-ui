@@ -6,7 +6,7 @@ import openai
 # --- Load OpenAI key securely from Streamlit secrets ---
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-st.title("ReadWith: Feedback Collector & AI Chat v3")
+st.title("ReadWith: Feedback Collector")
 
 # --- User prompt input ---
 st.subheader("💬 Start a Conversation with ReadWith")
@@ -49,8 +49,9 @@ if ai_response:
 
     written_feedback = st.text_area("Optional: Add any comments or suggestions", key="feedback")
 
-    if good or bad:
-        feedback_type = "Good" if good else "Needs Work"
+    # --- New: Submit Feedback Button ---
+    if st.button("Submit Feedback"):
+        feedback_type = "Good" if good else "Needs Work" if bad else "Unrated"
         timestamp = datetime.now().isoformat()
         feedback_data = {
             "timestamp": timestamp,
@@ -67,7 +68,7 @@ if ai_response:
 
         df = pd.concat([df, pd.DataFrame([feedback_data])], ignore_index=True)
         df.to_csv("feedback_log.csv", index=False)
-        st.success("✅ Feedback saved!")
+        st.success("✅ Feedback submitted!")
 
 elif not user_input:
     st.write("👆 Type a message to begin a conversation.")
