@@ -6,7 +6,7 @@ import openai
 # Load your OpenAI API key from Streamlit Secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-st.title("ReadWith: Feedback Collector & AI Chat")
+st.title("ReadWith: Feedback Collector & AI Chat v2")
 
 # --- Conversation prompt input ---
 st.subheader("💬 Start a Conversation with ReadWith")
@@ -69,4 +69,5 @@ if ai_response:
 # --- Fallback for initial load ---
 elif not user_input:
     st.write("👆 Type a message to begin a conversation.")
+
 
