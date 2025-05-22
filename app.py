@@ -3,7 +3,6 @@ import pandas as pd
 from datetime import datetime
 import openai
 
-# --- Load OpenAI key securely from Streamlit secrets ---
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(layout="wide")
@@ -38,8 +37,13 @@ st.markdown(
         width: fit-content;
         max-width: 100%;
     }
-    .gap-under-ai {
+    .chat-bubble-left {
+        background-color: #f9f9f9;
+        padding: 10px;
+        border-radius: 10px;
         margin-bottom: 30px;
+        width: fit-content;
+        max-width: 100%;
     }
     </style>
     """,
@@ -49,78 +53,13 @@ st.markdown(
 st.title("ReadWith: Feedback Collector")
 st.caption("📖 Focused on: *The Priory of the Orange Tree*")
 
-# --- State for multi-turn chat + feedback ---
+# --- Initialize state ---
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "feedback_state" not in st.session_state:
-    st.session_state.feedback_state = {}
+    st.session_state.feedback_state = []
 
-# --- Conversation and Feedback Section ---
-for i, turn in enumerate(st.session_state.chat_history):
-    cols = st.columns([3, 1])
-    
-    with cols[0]:
-        st.markdown(
-            f"""<div class="chat-bubble" style="text-align: right;"><strong>You:</strong> {turn['user']}</div>""",
-            unsafe_allow_html=True
-        )
-
-        st.markdown(
-            f"""<div class="chat-bubble gap-under-ai" style="text-align: left; background-color: #f9f9f9;"><strong>ReadWith:</strong> {turn['ai']}</div>""",
-            unsafe_allow_html=True
-        )
-
-    with cols[1]:
-        if i not in st.session_state.feedback_state:
-            st.session_state.feedback_state[i] = {"thumb": None, "comment": ""}
-
-        thumb = st.session_state.feedback_state[i]["thumb"]
-
-        # Button row: thumbs up/down inline
-        thumb_col1, thumb_col2 = st.columns(2)
-        with thumb_col1:
-            if st.button("👍", key=f"thumb_up_{i}"):
-                st.session_state.feedback_state[i]["thumb"] = "up"
-        with thumb_col2:
-            if st.button("👎", key=f"thumb_down_{i}"):
-                st.session_state.feedback_state[i]["thumb"] = "down"
-
-        # Re-render thumbs with style indicators
-        thumb_up_class = "thumb-selected thumb-up-selected" if thumb == "up" else ""
-        thumb_down_class = "thumb-selected thumb-down-selected" if thumb == "down" else ""
-
-        st.markdown(
-            f"""
-            <div class="feedback-buttons-row">
-                <button class="{thumb_up_class}">👍</button>
-                <button class="{thumb_down_class}">👎</button>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        # Text box + submit
-        comment = st.text_area("Comment", value=st.session_state.feedback_state[i]["comment"], key=f"comment_{i}", max_chars=500)
-        st.session_state.feedback_state[i]["comment"] = comment
-
-        if st.button("Submit Feedback", key=f"submit_feedback_{i}"):
-            feedback_data = {
-                "timestamp": datetime.now().isoformat(),
-                "turn": i + 1,
-                "user_input": turn['user'],
-                "ai_response": turn['ai'],
-                "rating": thumb or "Unrated",
-                "comment": comment
-            }
-            try:
-                df = pd.read_csv("feedback_log.csv")
-            except FileNotFoundError:
-                df = pd.DataFrame(columns=["timestamp", "turn", "user_input", "ai_response", "rating", "comment"])
-            df = pd.concat([df, pd.DataFrame([feedback_data])], ignore_index=True)
-            df.to_csv("feedback_log.csv", index=False)
-            st.success(f"✅ Feedback for Turn {i+1} saved!")
-
-# --- Input Area (Always last) ---
+# --- Message Input FIRST to ensure immediate update after submit ---
 st.markdown("---")
 st.subheader("💬 Start a New Message")
 with st.form("message_form", clear_on_submit=True):
@@ -147,4 +86,65 @@ if submitted and new_input:
         except Exception as e:
             ai_reply = f"⚠️ Error: {str(e)}"
 
+    # Add both turn and empty feedback record
     st.session_state.chat_history.append({"user": new_input, "ai": ai_reply})
+    st.session_state.feedback_state.append({"thumb": None, "comment": ""})
+
+# --- Chat + Feedback Display ---
+for i, turn in enumerate(st.session_state.chat_history):
+    cols = st.columns([3, 1])
+
+    with cols[0]:
+        st.markdown(
+            f"""<div class="chat-bubble" style="text-align: right;"><strong>You:</strong> {turn['user']}</div>""",
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            f"""<div class="chat-bubble-left" style="text-align: left;"><strong>ReadWith:</strong> {turn['ai']}</div>""",
+            unsafe_allow_html=True
+        )
+
+    with cols[1]:
+        feedback = st.session_state.feedback_state[i]
+        thumb = feedback["thumb"]
+
+        thumb_col1, thumb_col2 = st.columns(2)
+        with thumb_col1:
+            if st.button("👍", key=f"thumb_up_{i}"):
+                feedback["thumb"] = "up"
+        with thumb_col2:
+            if st.button("👎", key=f"thumb_down_{i}"):
+                feedback["thumb"] = "down"
+
+        thumb_up_class = "thumb-selected thumb-up-selected" if feedback["thumb"] == "up" else ""
+        thumb_down_class = "thumb-selected thumb-down-selected" if feedback["thumb"] == "down" else ""
+
+        st.markdown(
+            f"""
+            <div class="feedback-buttons-row">
+                <button class="{thumb_up_class}">👍</button>
+                <button class="{thumb_down_class}">👎</button>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        comment = st.text_area("Comment", value=feedback["comment"], key=f"comment_{i}", max_chars=500)
+        feedback["comment"] = comment
+
+        if st.button("Submit Feedback", key=f"submit_feedback_{i}"):
+            feedback_data = {
+                "timestamp": datetime.now().isoformat(),
+                "turn": i + 1,
+                "user_input": turn["user"],
+                "ai_response": turn["ai"],
+                "rating": feedback["thumb"] or "Unrated",
+                "comment": comment
+            }
+            try:
+                df = pd.read_csv("feedback_log.csv")
+            except FileNotFoundError:
+                df = pd.DataFrame(columns=["timestamp", "turn", "user_input", "ai_response", "rating", "comment"])
+            df = pd.concat([df, pd.DataFrame([feedback_data])], ignore_index=True)
+            df.to_csv("feedback_log.csv", index=False)
+            st.success(f"✅ Feedback for Turn {i+1} saved!")
