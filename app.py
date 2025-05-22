@@ -69,3 +69,4 @@ if ai_response:
 # --- Fallback for initial load ---
 elif not user_input:
     st.write("👆 Type a message to begin a conversation.")
+
