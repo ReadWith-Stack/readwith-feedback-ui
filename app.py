@@ -72,3 +72,14 @@ if st.session_state.ai_response:
         df.to_csv("feedback_log.csv", mode="a", header=not pd.io.common.file_exists("feedback_log.csv"), index=False)
 
         st.success("✅ Feedback submitted.")
+        import os
+
+# Show feedback file contents if it exists (for testing)
+if os.path.exists("feedback_log.csv"):
+    st.markdown("---")
+    st.subheader("📄 Feedback Log Preview")
+    df_log = pd.read_csv("feedback_log.csv")
+    st.dataframe(df_log)
+else:
+    st.info("No feedback_log.csv found yet. Submit feedback to create it.")
+
