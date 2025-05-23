@@ -54,7 +54,7 @@ if st.session_state.ai_response:
     with col2:
         downvote = st.button("👎", key="thumbs_down")
 
-    comment = st.text_area("Comment", height=60)
+    comment = st.text_area("Comment", height=80)
     submit = st.button("Submit Feedback")
 
     if submit:
