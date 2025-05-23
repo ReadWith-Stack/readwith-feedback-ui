@@ -12,13 +12,6 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "feedback" not in st.session_state:
     st.session_state.feedback = {}
-if "trigger_rerun" not in st.session_state:
-    st.session_state.trigger_rerun = False
-
-# --- Safe rerun trigger ---
-if st.session_state.trigger_rerun:
-    st.session_state.trigger_rerun = False
-    st.experimental_rerun()
 
 # --- CSS Styling ---
 st.markdown("""
@@ -110,14 +103,14 @@ if any(m["role"] == "assistant" for m in st.session_state.messages):
 # --- Input ---
 st.markdown("---")
 user_input = st.text_input("Your message", key="input", label_visibility="collapsed")
-if st.button("Submit Message"):
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        with st.spinner("ReadWith is replying..."):
-            response = openai.chat.completions.create(
-                model="gpt-4o",
-                messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-            )
-            ai_msg = response.choices[0].message.content.strip()
-            st.session_state.messages.append({"role": "assistant", "content": ai_msg})
-        st.session_state.trigger_rerun = True
+
+if user_input and st.button("Submit Message"):
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.spinner("ReadWith is replying..."):
+        response = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+        )
+        ai_msg = response.choices[0].message.content.strip()
+        st.session_state.messages.append({"role": "assistant", "content": ai_msg})
+    st.experimental_set_query_params(input="")
