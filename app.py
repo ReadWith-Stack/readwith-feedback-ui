@@ -16,6 +16,8 @@ if "ai_response" not in st.session_state:
     st.session_state.ai_response = None
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
+if "rating" not in st.session_state:
+    st.session_state.rating = "none"
 
 # --- UI Title ---
 st.title("📘 ReadWith: MVP Test (One-Turn Chat + Feedback)")
@@ -34,6 +36,7 @@ if user_input:
             ]
         )
         st.session_state.ai_response = response.choices[0].message.content
+        st.session_state.rating = "none"  # Reset thumbs for new turn
 
 # --- Display Messages ---
 if st.session_state.user_message:
@@ -51,9 +54,11 @@ if st.session_state.ai_response:
 
     col1, col2 = st.columns(2)
     with col1:
-        upvote = st.button("👍", key="thumbs_up")
+        if st.button("👍", key="thumbs_up"):
+            st.session_state.rating = "up"
     with col2:
-        downvote = st.button("👎", key="thumbs_down")
+        if st.button("👎", key="thumbs_down"):
+            st.session_state.rating = "down"
 
     comment = st.text_area("Comment", height=80)
     submit = st.button("Submit Feedback")
@@ -64,7 +69,7 @@ if st.session_state.ai_response:
             "session_id": st.session_state.session_id,
             "user_message": st.session_state.user_message,
             "ai_response": st.session_state.ai_response,
-            "rating": "up" if upvote else "down" if downvote else "none",
+            "rating": st.session_state.rating,
             "comment": comment,
             "status": "pending"
         }
