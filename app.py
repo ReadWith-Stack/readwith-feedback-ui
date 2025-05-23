@@ -1,12 +1,12 @@
 import streamlit as st
-import openai
+from openai import OpenAI
 import pandas as pd
 from datetime import datetime
 import uuid
 
 # --- Setup ---
 st.set_page_config(page_title="ReadWith Test", layout="wide")
-openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # --- Session Variables ---
 if "user_message" not in st.session_state:
@@ -25,14 +25,14 @@ user_input = st.chat_input("Ask ReadWith something about The Priory of the Orang
 if user_input:
     st.session_state.user_message = user_input
     with st.spinner("Thinking..."):
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a warm, witty, and insightful book discussion companion."},
                 {"role": "user", "content": user_input}
             ]
         )
-        st.session_state.ai_response = response.choices[0].message["content"]
+        st.session_state.ai_response = response.choices[0].message.content
 
 # --- Display Messages ---
 if st.session_state.user_message:
