@@ -18,10 +18,11 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
 # --- Title ---
-st.title("\U0001F4D8 ReadWith: Chat + Aligned Feedback")
+st.markdown("<h3>ReadWith: AI Testing & Feedback</h3>", unsafe_allow_html=True)
+st.markdown("<h5>Book: The Priory of The Orange Tree</h5>", unsafe_allow_html=True)
 
 # --- Chat Input ---
-user_input = st.chat_input("Ask something about The Priory of the Orange Tree")
+user_input = st.chat_input("Your Message")
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.spinner("Thinking..."):
@@ -57,11 +58,11 @@ for i in range(0, len(st.session_state.messages), 2):
             st.session_state.feedback[turn_id] = {"rating": "none", "comment": ""}
 
         st.markdown("##### Feedback")
-        c1, c2 = st.columns(2)
-        with c1:
+        feedback_row = st.columns([1, 1], gap="small")
+        with feedback_row[0]:
             if st.button("👍", key=f"up_{turn_id}"):
                 st.session_state.feedback[turn_id]["rating"] = "up"
-        with c2:
+        with feedback_row[1]:
             if st.button("👎", key=f"down_{turn_id}"):
                 st.session_state.feedback[turn_id]["rating"] = "down"
 
