@@ -11,21 +11,19 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # --- Session Setup ---
 if "messages" not in st.session_state:
-    st.session_state.messages = []  # List of {"role": "user"/"assistant", "content": ...}
+    st.session_state.messages = []
 if "feedback" not in st.session_state:
-    st.session_state.feedback = {}  # Dict with turn index as key
+    st.session_state.feedback = {}
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
-# --- UI Title ---
-st.title("📘 ReadWith: Multi-Turn Chat + Feedback")
+# --- Title ---
+st.title("\U0001F4D8 ReadWith: Chat + Aligned Feedback")
 
 # --- Chat Input ---
-user_input = st.chat_input("Ask ReadWith something about The Priory of the Orange Tree")
-
+user_input = st.chat_input("Ask something about The Priory of the Orange Tree")
 if user_input:
     st.session_state.messages.append({"role": "user", "content": user_input})
-
     with st.spinner("Thinking..."):
         response = client.chat.completions.create(
             model="gpt-4o",
@@ -36,63 +34,68 @@ if user_input:
         ai_message = response.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": ai_message})
 
-# --- Display Conversation ---
-for idx, msg in enumerate(st.session_state.messages):
-    role = msg["role"]
-    is_user = role == "user"
-    bg = "#DCEBFF" if is_user else "#F0F0F0"
-    align = "right" if is_user else "left"
+# --- Conversation & Feedback, turn-by-turn ---
+for i in range(0, len(st.session_state.messages), 2):
+    if i + 1 >= len(st.session_state.messages):
+        break  # Skip if assistant message not yet present
 
-    st.markdown(
-        f"<div style='background-color:{bg}; padding:10px; border-radius:10px; margin:4px 0; text-align:{align}; max-width:90%;'>{msg['content']}</div>",
-        unsafe_allow_html=True
-    )
+    user_msg = st.session_state.messages[i]["content"]
+    ai_msg = st.session_state.messages[i + 1]["content"]
 
-    # --- Feedback for AI Responses Only ---
-    if role == "assistant":
-        if idx not in st.session_state.feedback:
-            st.session_state.feedback[idx] = {"rating": "none", "comment": ""}
+    col1, col2 = st.columns([2, 1], gap="large")
 
-        with st.container():
-            st.markdown("##### 📝 Feedback")
+    with col1:
+        st.markdown(f"#### You:")
+        st.markdown(f"<div style='background-color:#DCEBFF; padding:10px; border-radius:10px;'>{user_msg}</div>", unsafe_allow_html=True)
 
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("👍", key=f"thumbs_up_{idx}"):
-                    st.session_state.feedback[idx]["rating"] = "up"
-            with col2:
-                if st.button("👎", key=f"thumbs_down_{idx}"):
-                    st.session_state.feedback[idx]["rating"] = "down"
+        st.markdown(f"#### ReadWith:")
+        st.markdown(f"<div style='background-color:#F0F0F0; padding:10px; border-radius:10px;'>{ai_msg}</div>", unsafe_allow_html=True)
 
-            st.session_state.feedback[idx]["comment"] = st.text_area(
-                "Comment",
-                value=st.session_state.feedback[idx]["comment"],
-                height=80,
-                key=f"comment_{idx}"
-            )
+    with col2:
+        turn_id = i + 1
+        if turn_id not in st.session_state.feedback:
+            st.session_state.feedback[turn_id] = {"rating": "none", "comment": ""}
 
-            if st.button("Submit Feedback", key=f"submit_{idx}"):
-                user_msg = st.session_state.messages[idx - 1]["content"] if idx > 0 else ""
-                ai_msg = msg["content"]
-                feedback = {
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "session_id": st.session_state.session_id,
-                    "turn_index": idx,
-                    "user_message": user_msg,
-                    "ai_response": ai_msg,
-                    "rating": st.session_state.feedback[idx]["rating"],
-                    "comment": st.session_state.feedback[idx]["comment"],
-                    "status": "pending"
-                }
-                df = pd.DataFrame([feedback])
-                df.to_csv("feedback_log.csv", mode="a", header=not os.path.exists("feedback_log.csv"), index=False)
-                st.success("✅ Feedback submitted.")
+        st.markdown("##### Feedback")
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("👍", key=f"up_{turn_id}"):
+                st.session_state.feedback[turn_id]["rating"] = "up"
+        with c2:
+            if st.button("👎", key=f"down_{turn_id}"):
+                st.session_state.feedback[turn_id]["rating"] = "down"
 
-# --- CSV Preview ---
+        st.session_state.feedback[turn_id]["comment"] = st.text_area(
+            "Comment",
+            key=f"comment_{turn_id}",
+            value=st.session_state.feedback[turn_id]["comment"],
+            height=80
+        )
+
+        if st.button("Submit Feedback", key=f"submit_{turn_id}"):
+            feedback = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "session_id": st.session_state.session_id,
+                "turn_index": turn_id,
+                "user_message": user_msg,
+                "ai_response": ai_msg,
+                "rating": st.session_state.feedback[turn_id]["rating"],
+                "comment": st.session_state.feedback[turn_id]["comment"],
+                "status": "pending"
+            }
+            df = pd.DataFrame([feedback])
+            df.to_csv("feedback_log.csv", mode="a", header=not os.path.exists("feedback_log.csv"), index=False)
+            st.success("✅ Feedback submitted.")
+
+# --- Chat input pinned to bottom ---
+st.markdown("---")
+
+# --- Download button under input ---
 if os.path.exists("feedback_log.csv"):
-    st.markdown("---")
-    st.subheader("📄 Feedback Log Preview")
-    df_log = pd.read_csv("feedback_log.csv")
-    st.dataframe(df_log)
-else:
-    st.info("No feedback submitted yet. Provide feedback to start building the log.")
+    with open("feedback_log.csv", "rb") as f:
+        st.download_button(
+            label="📥 Download Feedback Log",
+            data=f,
+            file_name="feedback_log.csv",
+            mime="text/csv"
+        )
