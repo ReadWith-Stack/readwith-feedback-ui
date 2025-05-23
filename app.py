@@ -1,4 +1,6 @@
 import streamlit as st
+st.write("Streamlit version:", st.__version__)
+import streamlit as st
 from datetime import datetime
 import pandas as pd
 import openai
