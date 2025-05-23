@@ -6,6 +6,9 @@ import openai
 client = openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(layout="wide")
+st.title("ReadWith: Feedback Collector")
+st.caption("📖 Focused on: *The Priory of the Orange Tree*")
+
 st.markdown(
     """
     <style>
@@ -48,30 +51,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("ReadWith: Feedback Collector")
-st.caption("📖 Focused on: *The Priory of the Orange Tree*")
-
-# --- Initialize state ---
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "feedback_state" not in st.session_state:
     st.session_state.feedback_state = []
 
-# --- Chat Display (conversation + feedback) ---
 for i, turn in enumerate(st.session_state.chat_history):
-    cols = st.columns([3, 1], gap="large")
+    col_left, col_right = st.columns([3, 1])
 
-    with cols[0]:
-        st.markdown(
-            f"""<div class="chat-bubble" style="text-align: right;"><strong>You:</strong> {turn['user']}</div>""",
-            unsafe_allow_html=True
-        )
-        st.markdown(
-            f"""<div class="chat-bubble-left" style="text-align: left;"><strong>ReadWith:</strong> {turn['ai']}</div>""",
-            unsafe_allow_html=True
-        )
+    with col_left:
+        st.markdown(f'<div class="chat-bubble" style="text-align: right;"><strong>You:</strong> {turn["user"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-bubble-left" style="text-align: left;"><strong>ReadWith:</strong> {turn["ai"]}</div>', unsafe_allow_html=True)
 
-    with cols[1]:
+    with col_right:
         if i >= len(st.session_state.feedback_state):
             st.session_state.feedback_state.append({"thumb": None, "comment": ""})
 
@@ -81,10 +73,10 @@ for i, turn in enumerate(st.session_state.chat_history):
         col_up, col_down = st.columns(2)
         with col_up:
             if st.button("👍", key=f"thumb_up_{i}"):
-                st.session_state.feedback_state[i]["thumb"] = "up"
+                feedback["thumb"] = "up"
         with col_down:
             if st.button("👎", key=f"thumb_down_{i}"):
-                st.session_state.feedback_state[i]["thumb"] = "down"
+                feedback["thumb"] = "down"
 
         thumb_up_class = "thumb-selected thumb-up-selected" if feedback["thumb"] == "up" else ""
         thumb_down_class = "thumb-selected thumb-down-selected" if feedback["thumb"] == "down" else ""
@@ -108,7 +100,7 @@ for i, turn in enumerate(st.session_state.chat_history):
                 "turn": i + 1,
                 "user_input": turn["user"],
                 "ai_response": turn["ai"],
-                "rating": feedback["thumb"] or "Unrated",
+                "rating": thumb or "Unrated",
                 "comment": comment
             }
             try:
@@ -119,7 +111,6 @@ for i, turn in enumerate(st.session_state.chat_history):
             df.to_csv("feedback_log.csv", index=False)
             st.success(f"✅ Feedback for Turn {i+1} saved!")
 
-# --- Message Input (always at the bottom) ---
 st.markdown("---")
 st.subheader("💬 Start a New Message")
 with st.form("message_form", clear_on_submit=True):
@@ -132,14 +123,8 @@ if submitted and new_input:
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "You are ReadWith, a warm, witty and insightful literary conversation partner. Speak conversationally, referencing the book if needed."
-                    },
-                    {
-                        "role": "user",
-                        "content": new_input
-                    }
+                    {"role": "system", "content": "You are ReadWith, a warm, witty and insightful literary conversation partner. Speak conversationally, referencing the book if needed."},
+                    {"role": "user", "content": new_input}
                 ]
             )
             ai_reply = response.choices[0].message.content
