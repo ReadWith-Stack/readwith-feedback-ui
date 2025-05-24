@@ -69,6 +69,11 @@ if user_input:
         ai_message = response.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": ai_message})
 
+    # --- Debug: Show retrieved context chunks ---
+    st.markdown("### 🔍 Retrieved Context Chunks")
+    for chunk in context_chunks:
+        st.markdown(f"- {chunk}")
+
 # --- Turn-by-turn conversation + feedback ---
 for i in range(0, len(st.session_state.messages), 2):
     if i + 1 >= len(st.session_state.messages):
