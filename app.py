@@ -4,10 +4,15 @@ import pandas as pd
 from datetime import datetime
 import uuid
 import os
+from supabase import create_client, Client
 
 # --- Setup ---
 st.set_page_config(page_title="ReadWith Chat", layout="wide")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+SUPABASE_URL = "https://nwhsnymzihkqtlufiafu.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53aHNueW16aWhrcXRsdWZpYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4NDE2MzEsImV4cCI6MjA2MzQxNzYzMX0.7ShjmnX6_cY2H-Aj3eHF_23BP4D0tUS5wgoDBq9_3oE"
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- Session Setup ---
 if "messages" not in st.session_state:
@@ -84,19 +89,21 @@ for i in range(0, len(st.session_state.messages), 2):
                 "comment": st.session_state.feedback[turn_id]["comment"],
                 "status": "pending"
             }
-            df = pd.DataFrame([feedback])
-            df.to_csv("feedback_log.csv", mode="a", header=not os.path.exists("feedback_log.csv"), index=False)
+            supabase.table("feedback").insert(feedback).execute()
             st.success("✅ Feedback submitted.")
 
 # --- Chat input pinned to bottom ---
 st.markdown("---")
 
 # --- Download button under input ---
-if os.path.exists("feedback_log.csv"):
-    with open("feedback_log.csv", "rb") as f:
-        st.download_button(
-            label="📥 Download Feedback Log",
-            data=f,
-            file_name="feedback_log.csv",
-            mime="text/csv"
-        )
+# This section can be retained if we want to download a local log too
+# or replaced by a Supabase-based admin dashboard.
+# For now, we leave it disabled since logging is now remote.
+# if os.path.exists("feedback_log.csv"):
+#     with open("feedback_log.csv", "rb") as f:
+#         st.download_button(
+#             label="\U0001F4E5 Download Feedback Log",
+#             data=f,
+#             file_name="feedback_log.csv",
+#             mime="text/csv"
+#         )
