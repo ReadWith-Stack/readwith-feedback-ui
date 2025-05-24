@@ -70,9 +70,12 @@ if user_input:
         st.session_state.messages.append({"role": "assistant", "content": ai_message})
 
     # --- Debug: Show retrieved context chunks ---
-    st.markdown("### 🔍 Retrieved Context Chunks")
+st.markdown("### 🔍 Retrieved Context Chunks")
+if context_chunks:
     for chunk in context_chunks:
         st.markdown(f"- {chunk}")
+else:
+    st.info("⚠️ No context chunks retrieved for this query. The RAG system returned zero results.")
 
 # --- Turn-by-turn conversation + feedback ---
 for i in range(0, len(st.session_state.messages), 2):
