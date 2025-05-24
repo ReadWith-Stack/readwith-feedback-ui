@@ -1,17 +1,15 @@
 import streamlit as st
 from openai import OpenAI
-import pandas as pd
 from datetime import datetime
 import uuid
-import os
 from supabase import create_client, Client
 
 # --- Setup ---
 st.set_page_config(page_title="ReadWith Chat", layout="wide")
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-SUPABASE_URL = "https://nwhsnymzihkqtlufiafu.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53aHNueW16aWhrcXRsdWZpYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4NDE2MzEsImV4cCI6MjA2MzQxNzYzMX0.7ShjmnX6_cY2H-Aj3eHF_23BP4D0tUS5wgoDBq9_3oE"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # --- Session Setup ---
@@ -40,21 +38,19 @@ if user_input:
         ai_message = response.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": ai_message})
 
-# --- Conversation & Feedback, turn-by-turn ---
+# --- Turn-by-turn conversation + feedback ---
 for i in range(0, len(st.session_state.messages), 2):
     if i + 1 >= len(st.session_state.messages):
-        break  # Skip if assistant message not yet present
+        break
 
     user_msg = st.session_state.messages[i]["content"]
     ai_msg = st.session_state.messages[i + 1]["content"]
-
     col1, col2 = st.columns([2, 1], gap="large")
 
     with col1:
-        st.markdown(f"#### You:")
+        st.markdown("#### You:")
         st.markdown(f"<div style='background-color:#DCEBFF; padding:10px; border-radius:10px;'>{user_msg}</div>", unsafe_allow_html=True)
-
-        st.markdown(f"#### ReadWith:")
+        st.markdown("#### ReadWith:")
         st.markdown(f"<div style='background-color:#F0F0F0; padding:10px; border-radius:10px;'>{ai_msg}</div>", unsafe_allow_html=True)
 
     with col2:
@@ -63,11 +59,11 @@ for i in range(0, len(st.session_state.messages), 2):
             st.session_state.feedback[turn_id] = {"rating": "none", "comment": ""}
 
         st.markdown("##### Feedback")
-        feedback_row = st.columns([1, 1], gap="small")
-        with feedback_row[0]:
+        thumbs = st.columns([1, 1], gap="small")
+        with thumbs[0]:
             if st.button("👍", key=f"up_{turn_id}"):
                 st.session_state.feedback[turn_id]["rating"] = "up"
-        with feedback_row[1]:
+        with thumbs[1]:
             if st.button("👎", key=f"down_{turn_id}"):
                 st.session_state.feedback[turn_id]["rating"] = "down"
 
@@ -91,19 +87,3 @@ for i in range(0, len(st.session_state.messages), 2):
             }
             supabase.table("feedback").insert(feedback).execute()
             st.success("✅ Feedback submitted.")
-
-# --- Chat input pinned to bottom ---
-st.markdown("---")
-
-# --- Download button under input ---
-# This section can be retained if we want to download a local log too
-# or replaced by a Supabase-based admin dashboard.
-# For now, we leave it disabled since logging is now remote.
-# if os.path.exists("feedback_log.csv"):
-#     with open("feedback_log.csv", "rb") as f:
-#         st.download_button(
-#             label="\U0001F4E5 Download Feedback Log",
-#             data=f,
-#             file_name="feedback_log.csv",
-#             mime="text/csv"
-#         )
