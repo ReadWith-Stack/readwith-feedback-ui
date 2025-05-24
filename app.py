@@ -12,6 +12,11 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# --- Helper function ---
+def load_system_prompt():
+    with open("prompts/system_prompt.txt", "r", encoding="utf-8") as f:
+        return f.read()
+
 # --- Session Setup ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -32,7 +37,7 @@ if user_input:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a warm, witty, and insightful book discussion companion."}
+                {"role": "system", "content": load_system_prompt()}
             ] + st.session_state.messages
         )
         ai_message = response.choices[0].message.content
@@ -87,3 +92,5 @@ for i in range(0, len(st.session_state.messages), 2):
             }
             supabase.table("feedback").insert(feedback).execute()
             st.success("✅ Feedback submitted.")
+
+st.markdown("---")
