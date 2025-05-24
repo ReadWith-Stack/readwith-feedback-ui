@@ -1,11 +1,17 @@
 import streamlit as st
 from supabase import create_client, Client
-import os
 
 # --- Supabase setup ---
-SUPABASE_URL = "https://nwhsnymzihkqtlufiafu.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im53aHNueW16aWhrcXRsdWZpYWZ1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4NDE2MzEsImV4cCI6MjA2MzQxNzYzMX0.7ShjmnX6_cY2H-Aj3eHF_23BP4D0tUS5wgoDBq9_3oE"
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# --- Admin login ---
+st.markdown("### 🔐 Admin Login")
+password = st.text_input("Enter admin password:", type="password")
+if password != st.secrets.get("ADMIN_PASSWORD"):
+    st.warning("Access restricted.")
+    st.stop()
 
 st.set_page_config(page_title="Feedback Review UI", layout="wide")
 st.title("🗃️ Review Feedback Comments")
@@ -18,8 +24,8 @@ summary = {
     "rejected": supabase.table("feedback").select("id").eq("status", "rejected").execute().count,
 }
 st.markdown(f"- **Total:** {summary['total']}")
-st.markdown(f"- ✅ **Approved:** {summary['approved']}")
-st.markdown(f"- ❌ **Rejected:** {summary['rejected']}")
+st.markdown(f"- ✅ Approved:** {summary['approved']}")
+st.markdown(f"- ❌ Rejected:** {summary['rejected']}")
 
 # --- Load pending feedback from Supabase ---
 with st.spinner("Loading feedback..."):
@@ -41,9 +47,7 @@ else:
                 if st.button("✅ Approve", key=f"approve_{item['id']}"):
                     supabase.table("feedback").update({"status": "approved"}).eq("id", item["id"]).execute()
                     st.success("Approved!")
-                    st.experimental_rerun()
             with col2:
                 if st.button("❌ Reject", key=f"reject_{item['id']}"):
                     supabase.table("feedback").update({"status": "rejected"}).eq("id", item["id"]).execute()
                     st.warning("Rejected.")
-                    st.experimental_rerun()
