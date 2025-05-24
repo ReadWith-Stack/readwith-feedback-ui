@@ -19,7 +19,7 @@ st.title("🗃️ Review Feedback Comments")
 
 # --- Load all feedback from Supabase ---
 with st.spinner("Loading feedback..."):
-    response_all = supabase.table("feedback").select("*").execute()
+    response_all = supabase.table("feedback").select("*").order("timestamp", desc=True).execute()
     feedback_items = response_all.data if response_all.data else []
 
 # --- Show summary counts ---
@@ -36,12 +36,13 @@ st.markdown(f"- ✅ Approved:** {status_counts['approved']}")
 st.markdown(f"- ❌ Rejected:** {status_counts['rejected']}")
 st.markdown(f"- ⏳ Pending:** {status_counts['pending']}")
 
-# --- Display all feedback ---
+# --- Display feedback, grouped by status ---
 if not feedback_items:
     st.success("✅ No feedback available.")
 else:
-    for item in feedback_items:
-        with st.expander(f"Turn {item['turn_index']} - {item['timestamp']}", expanded=True):
+    st.markdown("## ⏳ Pending Approval")
+    for item in [i for i in feedback_items if i['status'] == 'pending']:
+        with st.expander(f"Turn {item['turn_index']} - {item['timestamp']}", expanded=False):
             st.markdown(f"**Session ID:** {item['session_id']}")
             st.markdown(f"**User Message:** {item['user_message']}")
             st.markdown(f"**AI Response:** {item['ai_response']}")
@@ -49,14 +50,22 @@ else:
             st.markdown(f"**Comment:** {item['comment']}")
             st.markdown(f"**Status:** {item['status']}")
 
-            if item['status'] == 'pending':
-                col1, col2 = st.columns(2)
-                with col1:
-                    if st.button("✅ Approve", key=f"approve_{item['id']}"):
-                        supabase.table("feedback").update({"status": "approved"}).eq("id", item["id"]).execute()
-                        st.success("Approved!")
-                with col2:
-                    if st.button("❌ Reject", key=f"reject_{item['id']}"):
-                        supabase.table("feedback").update({"status": "rejected"}).eq("id", item["id"]).execute()
-                        st.warning("Rejected.")
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("✅ Approve", key=f"approve_{item['id']}"):
+                    supabase.table("feedback").update({"status": "approved"}).eq("id", item["id"]).execute()
+                    st.success("Approved!")
+            with col2:
+                if st.button("❌ Reject", key=f"reject_{item['id']}"):
+                    supabase.table("feedback").update({"status": "rejected"}).eq("id", item["id"]).execute()
+                    st.warning("Rejected.")
 
+    st.markdown("## ✅ Reviewed Feedback")
+    for item in [i for i in feedback_items if i['status'] in ['approved', 'rejected']]:
+        with st.expander(f"Turn {item['turn_index']} - {item['timestamp']}", expanded=False):
+            st.markdown(f"**Session ID:** {item['session_id']}")
+            st.markdown(f"**User Message:** {item['user_message']}")
+            st.markdown(f"**AI Response:** {item['ai_response']}")
+            st.markdown(f"**Rating:** {item['rating']}")
+            st.markdown(f"**Comment:** {item['comment']}")
+            st.markdown(f"**Status:** {item['status']}")
