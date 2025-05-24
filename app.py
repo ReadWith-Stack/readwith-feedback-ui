@@ -120,3 +120,7 @@ for i in range(0, len(st.session_state.messages), 2):
             st.success("✅ Feedback submitted.")
 
 st.markdown("---")
+
+st.markdown("### 🔍 Retrieved Context Chunks")
+for chunk in context_chunks:
+    st.markdown(f"- {chunk}")
