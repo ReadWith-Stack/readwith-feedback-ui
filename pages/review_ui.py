@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="Feedback Review UI", layout="wide")
+
 from supabase import create_client, Client
 
 # --- Supabase setup ---
@@ -13,7 +15,6 @@ if password != st.secrets.get("ADMIN_PASSWORD"):
     st.warning("Access restricted.")
     st.stop()
 
-st.set_page_config(page_title="Feedback Review UI", layout="wide")
 st.title("🗃️ Review Feedback Comments")
 
 # --- Show summary counts ---
