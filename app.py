@@ -70,61 +70,12 @@ if user_input:
         st.session_state.messages.append({"role": "assistant", "content": ai_message})
 
     # --- Debug: Show retrieved context chunks ---
-st.markdown("### 🔍 Retrieved Context Chunks")
-if context_chunks:
-    for chunk in context_chunks:
-        st.markdown(f"- {chunk}")
-else:
-    st.info("⚠️ No context chunks retrieved for this query. The RAG system returned zero results.")
-
-# --- Turn-by-turn conversation + feedback ---
-for i in range(0, len(st.session_state.messages), 2):
-    if i + 1 >= len(st.session_state.messages):
-        break
-
-    user_msg = st.session_state.messages[i]["content"]
-    ai_msg = st.session_state.messages[i + 1]["content"]
-    col1, col2 = st.columns([2, 1], gap="large")
-
-    with col1:
-        st.markdown("#### You:")
-        st.markdown(f"<div style='background-color:#DCEBFF; padding:10px; border-radius:10px;'>{user_msg}</div>", unsafe_allow_html=True)
-        st.markdown("#### ReadWith:")
-        st.markdown(f"<div style='background-color:#F0F0F0; padding:10px; border-radius:10px;'>{ai_msg}</div>", unsafe_allow_html=True)
-
-    with col2:
-        turn_id = i + 1
-        if turn_id not in st.session_state.feedback:
-            st.session_state.feedback[turn_id] = {"rating": "none", "comment": ""}
-
-        st.markdown("##### Feedback")
-        thumbs = st.columns([1, 1], gap="small")
-        with thumbs[0]:
-            if st.button("👍", key=f"up_{turn_id}"):
-                st.session_state.feedback[turn_id]["rating"] = "up"
-        with thumbs[1]:
-            if st.button("👎", key=f"down_{turn_id}"):
-                st.session_state.feedback[turn_id]["rating"] = "down"
-
-        st.session_state.feedback[turn_id]["comment"] = st.text_area(
-            "Comment",
-            key=f"comment_{turn_id}",
-            value=st.session_state.feedback[turn_id]["comment"],
-            height=80
-        )
-
-        if st.button("Submit Feedback", key=f"submit_{turn_id}"):
-            feedback = {
-                "timestamp": datetime.utcnow().isoformat(),
-                "session_id": st.session_state.session_id,
-                "turn_index": turn_id,
-                "user_message": user_msg,
-                "ai_response": ai_msg,
-                "rating": st.session_state.feedback[turn_id]["rating"],
-                "comment": st.session_state.feedback[turn_id]["comment"],
-                "status": "pending"
-            }
-            supabase.table("feedback").insert(feedback).execute()
-            st.success("✅ Feedback submitted.")
+if "context_chunks" in locals():
+    st.markdown("### 🔍 Retrieved Context Chunks")
+    if context_chunks:
+        for chunk in context_chunks:
+            st.markdown(f"- {chunk}")
+    else:
+        st.info("⚠️ No context chunks retrieved for this query. The RAG system returned zero results.")
 
 st.markdown("---")
