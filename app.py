@@ -14,7 +14,7 @@ openai.api_key = OPENAI_API_KEY
 # Connect to Supabase
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Load system prompt
+# Load system prompt from correct subdirectory
 with open("prompts/system_prompt.txt", "r", encoding="utf-8") as f:
     system_prompt = f.read()
 
