@@ -1,7 +1,7 @@
 import streamlit as st
 from supabase import create_client
 from datetime import datetime
-import openai
+from openai import OpenAI
 import uuid
 import os
 
@@ -9,12 +9,12 @@ import os
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
 
-# Connect to Supabase
+# Initialize clients
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+client = OpenAI(api_key=OPENAI_API_KEY)
 
-# Load system prompt from correct subdirectory
+# Load system prompt
 with open("prompts/system_prompt.txt", "r", encoding="utf-8") as f:
     system_prompt = f.read()
 
@@ -43,7 +43,7 @@ with col1:
         st.session_state.messages.append({"role": "user", "content": user_input})
 
         # Call OpenAI with system prompt + history
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "system", "content": system_prompt}] +
                      st.session_state.messages,
