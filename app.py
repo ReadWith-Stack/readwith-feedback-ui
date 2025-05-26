@@ -87,7 +87,7 @@ for i in range(0, len(st.session_state.messages), 2):
     with right_col:
         turn_id = i + 1
         if turn_id not in st.session_state.feedback:
-            st.session_state.feedback[turn_id] = {"rating": "none", "comment": ""}
+            st.session_state.feedback[turn_id] = {"rating": "none", "comment": "", "rewrite": ""}
 
         st.markdown("##### Feedback")
         thumbs = st.columns([1, 1], gap="small")
@@ -105,6 +105,13 @@ for i in range(0, len(st.session_state.messages), 2):
             height=80
         )
 
+        st.session_state.feedback[turn_id]["rewrite"] = st.text_area(
+            "Your rewrite of the AI response (optional):",
+            key=f"rewrite_{turn_id}",
+            value=st.session_state.feedback[turn_id]["rewrite"],
+            height=100
+        )
+
         if st.button("Submit Feedback", key=f"submit_{turn_id}"):
             feedback = {
                 "timestamp": datetime.utcnow().isoformat(),
@@ -114,6 +121,7 @@ for i in range(0, len(st.session_state.messages), 2):
                 "ai_response": ai_msg,
                 "rating": st.session_state.feedback[turn_id]["rating"],
                 "comment": st.session_state.feedback[turn_id]["comment"],
+                "rewrite": st.session_state.feedback[turn_id]["rewrite"],
                 "status": "pending"
             }
             supabase.table("feedback").insert(feedback).execute()
