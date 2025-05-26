@@ -15,7 +15,7 @@ openai.api_key = OPENAI_API_KEY
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Load system prompt
-with open("system_prompt.txt", "r", encoding="utf-8") as f:
+with open("prompts/system_prompt.txt", "r", encoding="utf-8") as f:
     system_prompt = f.read()
 
 # Session state
