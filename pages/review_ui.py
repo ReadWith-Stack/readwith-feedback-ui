@@ -48,6 +48,7 @@ else:
             st.markdown(f"**AI Response:** {item['ai_response']}")
             st.markdown(f"**Rating:** {item['rating']}")
             st.markdown(f"**Comment:** {item['comment']}")
+            st.markdown(f"**Rewrite:** {item.get('rewrite', '')}")
             st.markdown(f"**Status:** {item['status']}")
 
             col1, col2 = st.columns(2)
@@ -68,4 +69,5 @@ else:
             st.markdown(f"**AI Response:** {item['ai_response']}")
             st.markdown(f"**Rating:** {item['rating']}")
             st.markdown(f"**Comment:** {item['comment']}")
+            st.markdown(f"**Rewrite:** {item.get('rewrite', '')}")
             st.markdown(f"**Status:** {item['status']}")
