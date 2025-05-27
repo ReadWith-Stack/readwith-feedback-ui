@@ -25,6 +25,8 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 if "rerun" not in st.session_state:
     st.session_state.rerun = False
+if "feedback_rating" not in st.session_state:
+    st.session_state.feedback_rating = None
 
 # App layout
 st.set_page_config(page_title="ReadWith - Book Sage", layout="wide")
@@ -64,20 +66,19 @@ with col2:
         st.write("Was this helpful?")
         feedback_col = st.columns(2)
         with feedback_col[0]:
-            thumbs_up = st.button("👍", key="thumbs_up")
+            if st.button("👍", key="thumbs_up"):
+                st.session_state.feedback_rating = "approve"
         with feedback_col[1]:
-            thumbs_down = st.button("👎", key="thumbs_down")
+            if st.button("👎", key="thumbs_down"):
+                st.session_state.feedback_rating = "reject"
 
         comment = st.text_area("Leave a comment (optional)", key="comment_box")
         rewrite = st.text_area("Rewrite the AI response (optional)", key="rewrite_box")
 
-        feedback_decision = None
-        if thumbs_up:
-            feedback_decision = "approve"
-        elif thumbs_down:
-            feedback_decision = "reject"
-        elif rewrite.strip():
-            feedback_decision = "rewrite"
+        # If rewrite is provided, override thumb choice
+        feedback_decision = (
+            "rewrite" if rewrite.strip() else st.session_state.feedback_rating
+        )
 
         if st.button("Submit Feedback"):
             if feedback_decision:
@@ -110,6 +111,8 @@ with col2:
                 except Exception as e:
                     st.warning(f"⚠️ Trainer log failed: {e}")
 
+                # Reset rating and trigger rerun
+                st.session_state.feedback_rating = None
                 st.session_state.rerun = True
             else:
                 st.warning("Please select a thumbs up/down or provide a rewrite before submitting.")
