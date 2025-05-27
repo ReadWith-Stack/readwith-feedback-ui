@@ -43,6 +43,7 @@ for i in range(0, len(st.session_state.messages) - 1):
 for turn_index, user_msg, ai_msg in turns:
     key_base = f"turn_{turn_index}"
     with st.container():
+        st.markdown("<div style='margin-top: 30px;'></div>", unsafe_allow_html=True)
         col1, col2 = st.columns([3, 1], gap="large")
 
         with col1:
