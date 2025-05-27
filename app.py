@@ -75,7 +75,6 @@ with col2:
         comment = st.text_area("Leave a comment (optional)", key="comment_box")
         rewrite = st.text_area("Rewrite the AI response (optional)", key="rewrite_box")
 
-        # If rewrite is provided, override thumb choice
         feedback_decision = (
             "rewrite" if rewrite.strip() else st.session_state.feedback_rating
         )
@@ -89,7 +88,8 @@ with col2:
                     "rating": feedback_decision,
                     "comment": comment,
                     "rewrite": rewrite,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "status": "pending"  # ✅ Required for review UI
                 }
                 try:
                     supabase.table("feedback").insert(feedback_data).execute()
@@ -111,7 +111,6 @@ with col2:
                 except Exception as e:
                     st.warning(f"⚠️ Trainer log failed: {e}")
 
-                # Reset rating and trigger rerun
                 st.session_state.feedback_rating = None
                 st.session_state.rerun = True
             else:
