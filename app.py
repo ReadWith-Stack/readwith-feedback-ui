@@ -5,7 +5,7 @@ from openai import OpenAI
 import uuid
 import os
 
-# Environment variables (ensure these are set in Streamlit Cloud or locally)
+# Environment variables
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -44,7 +44,6 @@ with col1:
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
 
-        # Call OpenAI with system prompt + history
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "system", "content": system_prompt}] +
@@ -62,7 +61,6 @@ with col2:
         last_user_msg = next((m["content"] for m in reversed(st.session_state.messages) if m["role"] == "user"), "")
         last_ai_msg = next((m["content"] for m in reversed(st.session_state.messages) if m["role"] == "assistant"), "")
 
-        # Thumbs selection
         st.write("Was this helpful?")
         feedback_col = st.columns(2)
         with feedback_col[0]:
@@ -70,13 +68,9 @@ with col2:
         with feedback_col[1]:
             thumbs_down = st.button("👎", key="thumbs_down")
 
-        # Comment box
         comment = st.text_area("Leave a comment (optional)", key="comment_box")
-
-        # Rewrite field
         rewrite = st.text_area("Rewrite the AI response (optional)", key="rewrite_box")
 
-        # Determine feedback decision
         feedback_decision = None
         if thumbs_up:
             feedback_decision = "approve"
@@ -85,41 +79,42 @@ with col2:
         elif rewrite.strip():
             feedback_decision = "rewrite"
 
-        if feedback_decision:
-            # Store in feedback table
-            feedback_data = {
-                "session_id": st.session_state.session_id,
-                "prompt": last_user_msg,
-                "ai_response": last_ai_msg,
-                "rating": feedback_decision,
-                "comment": comment,
-                "rewrite": rewrite,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            try:
-                supabase.table("feedback").insert(feedback_data).execute()
-                st.success("✅ Feedback submitted.")
-            except Exception as e:
-                st.error(f"❌ Failed to save feedback: {e}")
+        if st.button("Submit Feedback"):
+            if feedback_decision:
+                feedback_data = {
+                    "session_id": st.session_state.session_id,
+                    "prompt": last_user_msg,
+                    "ai_response": last_ai_msg,
+                    "rating": feedback_decision,
+                    "comment": comment,
+                    "rewrite": rewrite,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                try:
+                    supabase.table("feedback").insert(feedback_data).execute()
+                    st.success("✅ Feedback submitted.")
+                except Exception as e:
+                    st.error(f"❌ Failed to save feedback: {e}")
 
-            # Also store in trainer_logs table
-            trainer_log = {
-                "session_id": st.session_state.session_id,
-                "prompt": last_user_msg,
-                "ai_response": last_ai_msg,
-                "user_rewrite": rewrite if rewrite else None,
-                "decision": feedback_decision,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-            try:
-                supabase.table("trainer_logs").insert(trainer_log).execute()
-                st.info("🧠 Trainer log recorded.")
-            except Exception as e:
-                st.warning(f"⚠️ Trainer log failed: {e}")
+                trainer_log = {
+                    "session_id": st.session_state.session_id,
+                    "prompt": last_user_msg,
+                    "ai_response": last_ai_msg,
+                    "user_rewrite": rewrite if rewrite else None,
+                    "decision": feedback_decision,
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+                try:
+                    supabase.table("trainer_logs").insert(trainer_log).execute()
+                    st.info("🧠 Trainer log recorded.")
+                except Exception as e:
+                    st.warning(f"⚠️ Trainer log failed: {e}")
 
-            st.session_state.rerun = True
+                st.session_state.rerun = True
+            else:
+                st.warning("Please select a thumbs up/down or provide a rewrite before submitting.")
 
-# Safe rerun at the very end
+# Rerun if needed
 if st.session_state.get("rerun"):
     st.session_state.rerun = False
     st.rerun()
