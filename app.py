@@ -68,8 +68,6 @@ with col2:
         key_base = f"turn_{turn_index}"
 
         st.markdown("---")
-        st.markdown(f"**User Message:** {user_msg['content']}")
-        st.markdown(f"**AI Response:** {ai_msg['content']}")
 
         col_a, col_b = st.columns(2)
         with col_a:
