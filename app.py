@@ -30,98 +30,94 @@ if "feedback_ratings" not in st.session_state:
 
 # App layout
 st.set_page_config(page_title="ReadWith - Book Sage", layout="wide")
-col1, col2 = st.columns([3, 1], gap="large")
 
-# Conversation area
-with col1:
-    st.title("📚 Book Sage")
-    turns = []
-    for i, msg in enumerate(st.session_state.messages):
-        role = msg["role"]
-        content = msg["content"]
-        align = "user" if role == "user" else "assistant"
-        with st.container():
-            with st.chat_message(align):
-                st.markdown(content)
+st.title("📚 Book Sage")
 
-        # Pair turns: user followed by assistant
-        if role == "user" and i + 1 < len(st.session_state.messages) and st.session_state.messages[i + 1]["role"] == "assistant":
-            turns.append((i, st.session_state.messages[i], st.session_state.messages[i + 1]))
+# Capture turns: user followed by assistant
+turns = []
+for i in range(0, len(st.session_state.messages) - 1):
+    if st.session_state.messages[i]["role"] == "user" and st.session_state.messages[i + 1]["role"] == "assistant":
+        turns.append((i, st.session_state.messages[i], st.session_state.messages[i + 1]))
 
-    user_input = st.chat_input("Ask about the book…")
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
+# Render each turn as its own visual block
+for turn_index, user_msg, ai_msg in turns:
+    key_base = f"turn_{turn_index}"
+    with st.container():
+        col1, col2 = st.columns([3, 1], gap="large")
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[{"role": "system", "content": system_prompt}] +
-                     st.session_state.messages,
-        )
-        reply = response.choices[0].message.content
-        st.session_state.messages.append({"role": "assistant", "content": reply})
+        with col1:
+            with st.chat_message("user"):
+                st.markdown(user_msg["content"])
+            with st.chat_message("assistant"):
+                st.markdown(ai_msg["content"])
 
-        st.session_state.rerun = True
+        with col2:
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button("👍", key=f"thumbs_up_{key_base}"):
+                    st.session_state.feedback_ratings[key_base] = "approve"
+            with col_b:
+                if st.button("👎", key=f"thumbs_down_{key_base}"):
+                    st.session_state.feedback_ratings[key_base] = "reject"
 
-# Feedback area
-with col2:
-    st.header("📬 Feedback")
-    for turn_index, user_msg, ai_msg in turns:
-        key_base = f"turn_{turn_index}"
+            comment = st.text_area("Leave a comment (optional)", key=f"comment_{key_base}")
+            rewrite = st.text_area("Rewrite the AI response (optional)", key=f"rewrite_{key_base}")
 
-        # Add spacing before each feedback section to align visually
-        st.markdown("<div style='margin-top: 2.5em'></div>", unsafe_allow_html=True)
+            feedback_decision = (
+                "rewrite" if rewrite.strip() else st.session_state.feedback_ratings.get(key_base)
+            )
 
-        col_a, col_b = st.columns(2)
-        with col_a:
-            if st.button("👍", key=f"thumbs_up_{key_base}"):
-                st.session_state.feedback_ratings[key_base] = "approve"
-        with col_b:
-            if st.button("👎", key=f"thumbs_down_{key_base}"):
-                st.session_state.feedback_ratings[key_base] = "reject"
+            if st.button("Submit Feedback", key=f"submit_{key_base}"):
+                if feedback_decision:
+                    feedback_data = {
+                        "session_id": st.session_state.session_id,
+                        "prompt": user_msg["content"],
+                        "ai_response": ai_msg["content"],
+                        "rating": feedback_decision,
+                        "comment": comment,
+                        "rewrite": rewrite,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "status": "pending",
+                        "turn_index": turn_index
+                    }
+                    try:
+                        supabase.table("feedback").insert(feedback_data).execute()
+                        st.success("✅ Feedback submitted.")
+                    except Exception as e:
+                        st.error(f"❌ Failed to save feedback: {e}")
 
-        comment = st.text_area("Leave a comment (optional)", key=f"comment_{key_base}")
-        rewrite = st.text_area("Rewrite the AI response (optional)", key=f"rewrite_{key_base}")
+                    trainer_log = {
+                        "session_id": st.session_state.session_id,
+                        "prompt": user_msg["content"],
+                        "ai_response": ai_msg["content"],
+                        "user_rewrite": rewrite if rewrite else None,
+                        "decision": feedback_decision,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                    try:
+                        supabase.table("trainer_logs").insert(trainer_log).execute()
+                        st.info("🧠 Trainer log recorded.")
+                    except Exception as e:
+                        st.warning(f"⚠️ Trainer log failed: {e}")
 
-        feedback_decision = (
-            "rewrite" if rewrite.strip() else st.session_state.feedback_ratings.get(key_base)
-        )
+                    st.session_state.rerun = True
+                else:
+                    st.warning("Please select a thumbs up/down or provide a rewrite before submitting.")
 
-        if st.button("Submit Feedback", key=f"submit_{key_base}"):
-            if feedback_decision:
-                feedback_data = {
-                    "session_id": st.session_state.session_id,
-                    "prompt": user_msg["content"],
-                    "ai_response": ai_msg["content"],
-                    "rating": feedback_decision,
-                    "comment": comment,
-                    "rewrite": rewrite,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "status": "pending",
-                    "turn_index": turn_index
-                }
-                try:
-                    supabase.table("feedback").insert(feedback_data).execute()
-                    st.success("✅ Feedback submitted.")
-                except Exception as e:
-                    st.error(f"❌ Failed to save feedback: {e}")
+# New user input
+user_input = st.chat_input("Ask about the book…")
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
 
-                trainer_log = {
-                    "session_id": st.session_state.session_id,
-                    "prompt": user_msg["content"],
-                    "ai_response": ai_msg["content"],
-                    "user_rewrite": rewrite if rewrite else None,
-                    "decision": feedback_decision,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-                try:
-                    supabase.table("trainer_logs").insert(trainer_log).execute()
-                    st.info("🧠 Trainer log recorded.")
-                except Exception as e:
-                    st.warning(f"⚠️ Trainer log failed: {e}")
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[{"role": "system", "content": system_prompt}] +
+                 st.session_state.messages,
+    )
+    reply = response.choices[0].message.content
+    st.session_state.messages.append({"role": "assistant", "content": reply})
 
-                st.session_state.rerun = True
-            else:
-                st.warning("Please select a thumbs up/down or provide a rewrite before submitting.")
+    st.session_state.rerun = True
 
 # Rerun if needed
 if st.session_state.get("rerun"):
