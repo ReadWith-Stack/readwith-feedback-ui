@@ -25,8 +25,8 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 if "rerun" not in st.session_state:
     st.session_state.rerun = False
-if "feedback_rating" not in st.session_state:
-    st.session_state.feedback_rating = None
+if "feedback_ratings" not in st.session_state:
+    st.session_state.feedback_ratings = {}
 
 # App layout
 st.set_page_config(page_title="ReadWith - Book Sage", layout="wide")
@@ -34,8 +34,8 @@ col1, col2 = st.columns([3, 1])
 
 # Conversation area
 with col1:
-    st.title("📚 Book Sage")
-    for msg in st.session_state.messages:
+    st.title("📚 Read With")
+    for i, msg in enumerate(st.session_state.messages):
         role = msg["role"]
         content = msg["content"]
         align = "user" if role == "user" else "assistant"
@@ -59,62 +59,70 @@ with col1:
 # Feedback area
 with col2:
     st.header("📬 Feedback")
-    if st.session_state.messages:
-        last_user_msg = next((m["content"] for m in reversed(st.session_state.messages) if m["role"] == "user"), "")
-        last_ai_msg = next((m["content"] for m in reversed(st.session_state.messages) if m["role"] == "assistant"), "")
+    turns = [
+        (i, st.session_state.messages[i], st.session_state.messages[i + 1])
+        for i in range(0, len(st.session_state.messages) - 1, 2)
+        if st.session_state.messages[i]["role"] == "user" and st.session_state.messages[i + 1]["role"] == "assistant"
+    ]
 
-        st.write("Was this helpful?")
-        feedback_col = st.columns(2)
-        with feedback_col[0]:
-            if st.button("👍", key="thumbs_up"):
-                st.session_state.feedback_rating = "approve"
-        with feedback_col[1]:
-            if st.button("👎", key="thumbs_down"):
-                st.session_state.feedback_rating = "reject"
+    for turn_index, user_msg, ai_msg in turns:
+        with st.expander(f"Turn {turn_index // 2 + 1}", expanded=False):
+            st.markdown(f"**User Message:** {user_msg['content']}")
+            st.markdown(f"**AI Response:** {ai_msg['content']}")
 
-        comment = st.text_area("Leave a comment (optional)", key="comment_box")
-        rewrite = st.text_area("Rewrite the AI response (optional)", key="rewrite_box")
+            col_a, col_b = st.columns(2)
+            key_base = f"turn_{turn_index}"
 
-        feedback_decision = (
-            "rewrite" if rewrite.strip() else st.session_state.feedback_rating
-        )
+            with col_a:
+                if st.button("👍", key=f"thumbs_up_{key_base}"):
+                    st.session_state.feedback_ratings[key_base] = "approve"
+            with col_b:
+                if st.button("👎", key=f"thumbs_down_{key_base}"):
+                    st.session_state.feedback_ratings[key_base] = "reject"
 
-        if st.button("Submit Feedback"):
-            if feedback_decision:
-                feedback_data = {
-                    "session_id": st.session_state.session_id,
-                    "prompt": last_user_msg,
-                    "ai_response": last_ai_msg,
-                    "rating": feedback_decision,
-                    "comment": comment,
-                    "rewrite": rewrite,
-                    "timestamp": datetime.utcnow().isoformat(),
-                    "status": "pending"  # ✅ Required for review UI
-                }
-                try:
-                    supabase.table("feedback").insert(feedback_data).execute()
-                    st.success("✅ Feedback submitted.")
-                except Exception as e:
-                    st.error(f"❌ Failed to save feedback: {e}")
+            comment = st.text_area("Leave a comment (optional)", key=f"comment_{key_base}")
+            rewrite = st.text_area("Rewrite the AI response (optional)", key=f"rewrite_{key_base}")
 
-                trainer_log = {
-                    "session_id": st.session_state.session_id,
-                    "prompt": last_user_msg,
-                    "ai_response": last_ai_msg,
-                    "user_rewrite": rewrite if rewrite else None,
-                    "decision": feedback_decision,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-                try:
-                    supabase.table("trainer_logs").insert(trainer_log).execute()
-                    st.info("🧠 Trainer log recorded.")
-                except Exception as e:
-                    st.warning(f"⚠️ Trainer log failed: {e}")
+            feedback_decision = (
+                "rewrite" if rewrite.strip() else st.session_state.feedback_ratings.get(key_base)
+            )
 
-                st.session_state.feedback_rating = None
-                st.session_state.rerun = True
-            else:
-                st.warning("Please select a thumbs up/down or provide a rewrite before submitting.")
+            if st.button("Submit Feedback", key=f"submit_{key_base}"):
+                if feedback_decision:
+                    feedback_data = {
+                        "session_id": st.session_state.session_id,
+                        "prompt": user_msg["content"],
+                        "ai_response": ai_msg["content"],
+                        "rating": feedback_decision,
+                        "comment": comment,
+                        "rewrite": rewrite,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "status": "pending",
+                        "turn_index": turn_index
+                    }
+                    try:
+                        supabase.table("feedback").insert(feedback_data).execute()
+                        st.success("✅ Feedback submitted.")
+                    except Exception as e:
+                        st.error(f"❌ Failed to save feedback: {e}")
+
+                    trainer_log = {
+                        "session_id": st.session_state.session_id,
+                        "prompt": user_msg["content"],
+                        "ai_response": ai_msg["content"],
+                        "user_rewrite": rewrite if rewrite else None,
+                        "decision": feedback_decision,
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                    try:
+                        supabase.table("trainer_logs").insert(trainer_log).execute()
+                        st.info("🧑‍🏫 Trainer log recorded.")
+                    except Exception as e:
+                        st.warning(f"⚠️ Trainer log failed: {e}")
+
+                    st.session_state.rerun = True
+                else:
+                    st.warning("Please select a thumbs up/down or provide a rewrite before submitting.")
 
 # Rerun if needed
 if st.session_state.get("rerun"):
