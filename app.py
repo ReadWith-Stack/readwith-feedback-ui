@@ -23,6 +23,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
+if "rerun" not in st.session_state:
+    st.session_state.rerun = False
 
 # App layout
 st.set_page_config(page_title="ReadWith - Book Sage", layout="wide")
@@ -51,7 +53,7 @@ with col1:
         reply = response.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": reply})
 
-        st.experimental_rerun()
+        st.session_state.rerun = True
 
 # Feedback area
 with col2:
@@ -115,4 +117,9 @@ with col2:
             except Exception as e:
                 st.warning(f"⚠️ Trainer log failed: {e}")
 
-            st.experimental_rerun()
+            st.session_state.rerun = True
+
+# Safe rerun trigger at end of script
+if st.session_state.get("rerun"):
+    st.session_state.rerun = False
+    st.experimental_rerun()
