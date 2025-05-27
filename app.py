@@ -30,7 +30,7 @@ if "feedback_ratings" not in st.session_state:
 
 # App layout
 st.set_page_config(page_title="ReadWith - Book Sage", layout="wide")
-col1, col2 = st.columns([3, 1])
+col1, col2 = st.columns([3, 1], gap="large")
 
 # Conversation area
 with col1:
@@ -40,8 +40,9 @@ with col1:
         role = msg["role"]
         content = msg["content"]
         align = "user" if role == "user" else "assistant"
-        with st.chat_message(align):
-            st.markdown(content)
+        with st.container():
+            with st.chat_message(align):
+                st.markdown(content)
 
         # Pair turns: user followed by assistant
         if role == "user" and i + 1 < len(st.session_state.messages) and st.session_state.messages[i + 1]["role"] == "assistant":
@@ -67,7 +68,8 @@ with col2:
     for turn_index, user_msg, ai_msg in turns:
         key_base = f"turn_{turn_index}"
 
-        st.markdown("---")
+        # Add spacing before each feedback section to align visually
+        st.markdown("<div style='margin-top: 2.5em'></div>", unsafe_allow_html=True)
 
         col_a, col_b = st.columns(2)
         with col_a:
