@@ -89,13 +89,15 @@ for turn_index, user_msg, ai_msg in turns:
                     except Exception as e:
                         st.error(f"❌ Failed to save feedback: {e}")
 
-                    trainer_log = {
-                        "session_id": st.session_state.session_id,
-                        "prompt": user_msg["content"],
-                        "ai_response": ai_msg["content"],
-                        "user_rewrite": rewrite if rewrite else None,
-                        "decision": feedback_decision,
-                        "timestamp": datetime.utcnow().isoformat()
+                   trainer_log = {
+    "session_id": st.session_state.get("session_id", "anonymous"),
+    "prompt": user_msg["content"],
+    "ai_response": ai_msg["content"],
+    "user_rewrite": rewrite if rewrite else None,
+    "decision": feedback_decision,
+    "timestamp": datetime.utcnow().isoformat()
+}
+
                     }
                     try:
                         supabase.table("trainer_logs").insert(trainer_log).execute()
