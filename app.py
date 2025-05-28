@@ -70,18 +70,16 @@ for turn_index, user_msg, ai_msg in turns:
 
             if st.button("Submit Feedback", key=f"submit_{key_base}"):
                 if feedback_decision:
-                   feedback_data = {
-    "session_id": st.session_state.get("session_id", "anonymous"),
-    "prompt": user_msg["content"],
-    "ai_response": ai_msg["content"],
-    "rating": feedback_decision,
-    "comment": comment,
-    "rewrite": rewrite,
-    "timestamp": datetime.utcnow().isoformat(),
-    "status": "pending",
-    "turn_index": turn_index
-}
-
+                    feedback_data = {
+                        "session_id": st.session_state.session_id,
+                        "prompt": user_msg["content"],
+                        "ai_response": ai_msg["content"],
+                        "rating": feedback_decision,
+                        "comment": comment,
+                        "rewrite": rewrite,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "status": "pending",
+                        "turn_index": turn_index
                     }
                     try:
                         supabase.table("feedback").insert(feedback_data).execute()
@@ -89,15 +87,13 @@ for turn_index, user_msg, ai_msg in turns:
                     except Exception as e:
                         st.error(f"❌ Failed to save feedback: {e}")
 
-                   trainer_log = {
-    "session_id": st.session_state.get("session_id", "anonymous"),
-    "prompt": user_msg["content"],
-    "ai_response": ai_msg["content"],
-    "user_rewrite": rewrite if rewrite else None,
-    "decision": feedback_decision,
-    "timestamp": datetime.utcnow().isoformat()
-}
-
+                    trainer_log = {
+                        "session_id": st.session_state.session_id,
+                        "prompt": user_msg["content"],
+                        "ai_response": ai_msg["content"],
+                        "user_rewrite": rewrite if rewrite else None,
+                        "decision": feedback_decision,
+                        "timestamp": datetime.utcnow().isoformat()
                     }
                     try:
                         supabase.table("trainer_logs").insert(trainer_log).execute()
