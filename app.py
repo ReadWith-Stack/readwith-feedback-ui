@@ -82,7 +82,6 @@ for turn_index, user_msg, ai_msg in turns:
     "turn_index": turn_index
 }
 
-
                     }
                     try:
                         supabase.table("feedback").insert(feedback_data).execute()
